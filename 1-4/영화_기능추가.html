@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>내 영화 티어리스트</title>
+  <style>
+    :root {
+      --paper:#faf8f3;
+      --ink:#242922;
+      --muted:#5f685d;
+      --line:#d9dad1;
+      --green:#276453;
+      --sage:#e3eee7;
+      --peach:#f2e6dc;
+    }
+    * { box-sizing:border-box; }
+    body {
+      margin:0;
+      color:var(--ink);
+      background:var(--paper);
+      font-family:system-ui,-apple-system,sans-serif;
+      line-height:1.6;
+    }
+    main {
+      width:min(100% - 32px,860px);
+      margin:32px auto 48px;
+    }
+    header {
+      display:flex;
+      align-items:start;
+      justify-content:space-between;
+      gap:20px;
+      flex-wrap:wrap;
+    }
+    h1 {
+      margin:0;
+      font-size:clamp(26px,5vw,34px);
+      line-height:1.25;
+      letter-spacing:-.03em;
+    }
+    .sub {
+      margin:10px 0 0;
+      color:var(--muted);
+      max-width:46ch;
+    }
+    .tools {
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      width:100%;
+      margin-top:20px;
+    }
+    .tools input {
+      min-width:0;
+      flex:1 1 160px;
+      border:1.5px solid var(--line);
+      border-radius:12px;
+      padding:11px 12px;
+      font:inherit;
+    }
+    button { font:inherit; cursor:pointer; }
+    .tools button {
+      padding:10px 15px;
+      border:1px solid var(--green);
+      border-radius:12px;
+      font-weight:700;
+      background:var(--green);
+      color:#fff;
+    }
+    .tools .reset { color:var(--green); background:#fff; }
+    #message {
+      min-height:26px;
+      margin:14px 0;
+      font-size:14px;
+      color:var(--muted);
+    }
+    .tiers { display:grid; gap:10px; }
+    .row {
+      display:flex;
+      min-height:90px;
+      background:#fff;
+      border:1.5px solid var(--line);
+      border-radius:14px;
+      overflow:hidden;
+    }
+    .row.over {
+      outline:3px solid var(--green);
+      outline-offset:1px;
+    }
+    .label {
+      width:64px;
+      flex-shrink:0;
+      border:0;
+      color:white;
+      font-size:26px;
+      font-weight:800;
+      padding:12px 4px;
+    }
+    .S .label { background:#a55239; }
+    .A .label { background:#b4763e; }
+    .B .label { background:#276453; }
+    .C .label { background:#67725d; }
+    .drop {
+      flex:1;
+      min-width:0;
+      display:flex;
+      flex-wrap:wrap;
+      align-content:flex-start;
+      gap:9px;
+      padding:12px;
+      min-height:88px;
+    }
+    .pool { margin-top:22px; }
+    .pool-head {
+      margin:0 0 8px;
+      border:0;
+      padding:0;
+      background:transparent;
+      color:var(--muted);
+      font-size:17px;
+      font-weight:700;
+      text-align:left;
+    }
+    #pool {
+      border:1.5px dashed var(--line);
+      border-radius:14px;
+      background:#fff;
+    }
+    .card {
+      width:98px;
+      min-height:62px;
+      padding:8px;
+      border:1px solid transparent;
+      border-radius:10px;
+      font-size:14px;
+      font-weight:650;
+      line-height:1.35;
+      overflow-wrap:anywhere;
+      color:var(--ink);
+      cursor:grab;
+    }
+    .card[aria-pressed="true"] {
+      outline:3px solid var(--green);
+      outline-offset:2px;
+    }
+    .count { display:block; font-size:14px; font-weight:600; }
+    .note {
+      font-size:13px;
+      color:var(--muted);
+      margin-top:18px;
+    }
+    :focus-visible {
+      outline:3px solid #ba613a;
+      outline-offset:3px;
+    }
+
+    /* 카드를 선택하면 나타나는 관리 영역 */
+    .editor {
+      margin:0 0 18px;
+      padding:14px;
+      background:var(--sage);
+      border:1.5px solid var(--line);
+      border-radius:14px;
+    }
+    .editor[hidden] { display:none; }
+    .editor h2 {
+      margin:0 0 12px;
+      font-size:17px;
+      overflow-wrap:anywhere;
+    }
+    .editor-row {
+      display:flex;
+      align-items:center;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .editor-row + .editor-row { margin-top:12px; }
+    .editor label { font-weight:650; }
+    .editor input,
+    .editor select {
+      min-width:0;
+      max-width:100%;
+      padding:9px 10px;
+      border:1px solid var(--line);
+      border-radius:10px;
+      background:#fff;
+      color:var(--ink);
+      font:inherit;
+    }
+    .editor input { flex:1 1 160px; }
+    .editor button {
+      padding:9px 12px;
+      border:1px solid var(--green);
+      border-radius:10px;
+      background:#fff;
+      color:var(--green);
+      font-weight:700;
+    }
+    .editor .danger {
+      border-color:#a55239;
+      color:#a55239;
+    }
+    .editor-help {
+      margin:10px 0 0;
+      font-size:13px;
+      color:var(--muted);
+    }
+    @media(max-width:420px) {
+      .label { width:48px; }
+      .card { width:90px; }
+      .drop { padding:10px; gap:8px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>내 영화 티어리스트</h1>
+        <p class="sub">
+          영화를 선택한 뒤 옮길 등급 글자를 눌러 주세요.
+          카드를 끌어서 놓아도 됩니다.
+        </p>
+      </div>
+    </header>
+
+    <form class="tools" id="add-form">
+      <input
+        id="title"
+        aria-label="영화 제목"
+        placeholder="영화 제목 추가"
+        maxlength="80"
+      >
+      <button type="submit">추가</button>
+      <button type="button" class="reset" id="reset">처음으로</button>
+    </form>
+
+    <p id="message" role="status">
+      영화를 선택해 S·A·B·C로 나누어 보세요.
+    </p>
+
+    <section
+      class="editor"
+      id="editor"
+      aria-labelledby="editor-heading"
+      hidden
+    >
+      <h2 id="editor-heading">선택한 영화</h2>
+
+      <div class="editor-row">
+        <label for="tier-select">등급 변경</label>
+        <select id="tier-select">
+          <option value="pool">미분류</option>
+          <option value="S">S</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+        </select>
+        <button type="button" id="delete-movie" class="danger">
+          영화 삭제
+        </button>
+        <button type="button" id="close-editor">선택 해제</button>
+      </div>
+
+      <form id="edit-form" class="editor-row">
+        <label for="edit-title">영화 제목</label>
+        <input
+          id="edit-title"
+          maxlength="80"
+          placeholder="수정할 영화 제목"
+          autocomplete="off"
+        >
+        <button type="submit">제목 저장</button>
+      </form>
+
+      <p class="editor-help">
+        선택 상자에서 등급을 고르면 바로 이동합니다.
+        기존처럼 등급 글자를 누르거나 카드를 끌어도 됩니다.
+      </p>
+    </section>
+
+    <section class="tiers" id="tiers" aria-label="영화 등급"></section>
+
+    <section class="pool" aria-label="아직 안 정한 영화">
+      <button
+        class="pool-head"
+        id="pool-label"
+        type="button"
+        aria-label="미분류로 옮기기"
+      >아직 안 정한 영화</button>
+      <div class="drop" id="pool" data-tier="pool"></div>
+    </section>
+
+    <p class="note">
+      같은 브라우저에서 이 파일을 다시 열면 정리한 목록이 남습니다.
+      다른 사람에게 파일을 보내도 내 입력 내역까지 전달되지는 않습니다.
+    </p>
+  </main>
+
+  <script>
+    const KEY = "codyssey-activity-04-v2";
+    const LEVELS = ['S', 'A', 'B', 'C', 'pool'];
+    const TITLES = [
+      "기생충",
+      "인터스텔라",
+      "라라랜드",
+      "센과 치히로의 행방불명",
+      "어벤져스: 엔드게임",
+      "범죄도시",
+      "타이타닉",
+      "토이 스토리"
+    ];
+    const COLORS = [
+      "#f2e6dc",
+      "#e3eee7",
+      "#ede7f6",
+      "#fcefd9",
+      "#e2ecf4",
+      "#f6e3e3"
+    ];
+
+    const initial = () => ({
+      nextId: TITLES.length + 1,
+      items: TITLES.map((title, index) => ({
+        id: 'm' + (index + 1),
+        title,
+        tier: 'pool'
+      }))
+    });
+
+    let state = initial();
+    let selected = null;
+
+    try {
+      const stored = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (
+        stored &&
+        Number.isSafeInteger(stored.nextId) &&
+        Array.isArray(stored.items) &&
+        stored.items.every(item =>
+          typeof item.id === 'string' &&
+          typeof item.title === 'string' &&
+          LEVELS.includes(item.tier)
+        )
+      ) {
+        state = stored;
+      }
+    } catch {}
+
+    function showMessage(message) {
+      document.querySelector('#message').textContent = message;
+    }
+
+    function save() {
+      try {
+        localStorage.setItem(KEY, JSON.stringify(state));
+        return true;
+      } catch {
+        showMessage(
+          'この'
+            .replace('この', 'この')
+        );
+        showMessage(
+          '이 브라우저에서는 저장하지 못했어요. ' +
+          '현재 화면에서 확인한 내용과 다시 열어 확인한 내용을 구분해 주세요.'
+        );
+        return false;
+      }
+    }
+
+    function finishChange(message) {
+      const saved = save();
+      render();
+      if (saved) showMessage(message);
+    }
+
+    function move(id, tier) {
+      const item = state.items.find(item => item.id === id);
+      if (!item || !LEVELS.includes(tier)) return;
+
+      item.tier = tier;
+      selected = null;
+      finishChange((item.title || '영화') + '를 옮겼어요.');
+    }
+
+    function renderEditor() {
+      const editor = document.querySelector('#editor');
+      const item = state.items.find(item => item.id === selected);
+
+      editor.hidden = !item;
+      if (!item) return;
+
+      document.querySelector('#editor-heading').textContent =
+        '선택한 영화: ' + (item.title || '영화');
+      document.querySelector('#tier-select').value = item.tier;
+      document.querySelector('#edit-title').value = item.title;
+    }
+
+    function card(item, index) {
+      const element = document.createElement('button');
+      element.type = 'button';
+      element.className = 'card';
+      element.draggable = true;
+      element.textContent = item.title || ' ';
+      element.dataset.id = item.id;
+      element.style.backgroundColor = COLORS[index % COLORS.length];
+      element.setAttribute('aria-label', item.title || '영화 카드');
+      element.setAttribute('aria-pressed', String(selected === item.id));
+      element.setAttribute('aria-controls', 'editor');
+
+      element.addEventListener('click', event => {
+        event.stopPropagation();
+        selected = selected === item.id ? null : item.id;
+        render();
+        showMessage(
+          selected
+            ? (item.title || '영화') +
+              '를 선택했어요. 등급 변경, 제목 수정, 삭제를 할 수 있어요.'
+            : '선택을 해제했어요.'
+        );
+      });
+
+      element.addEventListener('dragstart', event => {
+        event.dataTransfer.setData('text/plain', item.id);
+      });
+
+      return element;
+    }
+
+    function wireDrop(element, tier) {
+      element.addEventListener('dragover', event => {
+        event.preventDefault();
+        element.closest('.row')?.classList.add('over');
+      });
+
+      element.addEventListener('dragleave', () => {
+        element.closest('.row')?.classList.remove('over');
+      });
+
+      element.addEventListener('drop', event => {
+        event.preventDefault();
+        element.closest('.row')?.classList.remove('over');
+        move(event.dataTransfer.getData('text/plain'), tier);
+      });
+
+      element.onclick = () => {
+        if (selected) move(selected, tier);
+      };
+    }
+
+    function render() {
+      const tiers = document.querySelector('#tiers');
+      tiers.replaceChildren();
+
+      for (const tier of LEVELS.filter(value => value !== 'pool')) {
+        const row = document.createElement('div');
+        row.className = 'row ' + tier;
+
+        const label = document.createElement('button');
+        label.type = 'button';
+        label.className = 'label';
+        label.textContent = tier;
+        label.setAttribute('aria-label', tier + '등급으로 옮기기');
+
+        label.addEventListener('click', () => {
+          if (selected) {
+            move(selected, tier);
+          } else {
+            showMessage('먼저 영화 카드를 선택해 주세요.');
+          }
+        });
+
+        const drop = document.createElement('div');
+        drop.className = 'drop';
+        drop.dataset.tier = tier;
+
+        state.items.forEach((item, index) => {
+          if (item.tier === tier) drop.append(card(item, index));
+        });
+
+        wireDrop(drop, tier);
+        row.append(label, drop);
+        tiers.append(row);
+      }
+
+      const pool = document.querySelector('#pool');
+      pool.replaceChildren();
+
+      state.items.forEach((item, index) => {
+        if (item.tier === 'pool') pool.append(card(item, index));
+      });
+
+      renderEditor();
+    }
+
+    wireDrop(document.querySelector('#pool'), 'pool');
+
+    document.querySelector('#pool-label').addEventListener('click', () => {
+      if (selected) {
+        move(selected, 'pool');
+      } else {
+        showMessage('먼저 영화 카드를 선택해 주세요.');
+      }
+    });
+
+    document.querySelector('#add-form').addEventListener('submit', event => {
+      event.preventDefault();
+
+      const input = document.querySelector('#title');
+      const title = input.value.trim();
+
+      if (!title) {
+        showMessage('영화 제목을 입력해 주세요.');
+        input.focus();
+        return;
+      }
+
+      if (state.items.some(item => item.title === title)) {
+        showMessage('이미 있는 영화 제목이에요. 다른 제목을 넣어 주세요.');
+        return;
+      }
+
+      state.items.push({
+        id: 'm' + state.nextId++,
+        title,
+        tier: 'pool'
+      });
+
+      input.value = '';
+      finishChange('영화를 추가했어요.');
+      input.focus();
+    });
+
+    document.querySelector('#tier-select').addEventListener('change', event => {
+      if (selected) move(selected, event.target.value);
+    });
+
+    document.querySelector('#edit-form').addEventListener('submit', event => {
+      event.preventDefault();
+
+      const item = state.items.find(item => item.id === selected);
+      if (!item) return;
+
+      const input = document.querySelector('#edit-title');
+      const title = input.value.trim();
+
+      if (!title) {
+        showMessage('수정할 영화 제목을 입력해 주세요.');
+        input.focus();
+        return;
+      }
+
+      if (
+        state.items.some(other =>
+          other.id !== item.id && other.title === title
+        )
+      ) {
+        showMessage('이미 있는 영화 제목이에요. 다른 제목을 넣어 주세요.');
+        input.focus();
+        return;
+      }
+
+      item.title = title;
+      finishChange('영화 제목을 수정했어요.');
+    });
+
+    document.querySelector('#delete-movie').addEventListener('click', () => {
+      const item = state.items.find(item => item.id === selected);
+      if (!item) return;
+
+      if (!window.confirm('“' + item.title + '” 영화를 삭제할까요?')) return;
+
+      state.items = state.items.filter(other => other.id !== item.id);
+      selected = null;
+      finishChange('영화를 삭제했어요.');
+    });
+
+    document.querySelector('#close-editor').addEventListener('click', () => {
+      selected = null;
+      render();
+      showMessage('선택을 해제했어요.');
+    });
+
+    document.querySelector('#reset').addEventListener('click', () => {
+      state = initial();
+      selected = null;
+      document.querySelector('#title').value = '';
+      finishChange('처음 목록으로 돌아왔어요.');
+    });
+
+    render();
+  </script>
+</body>
+</html>
