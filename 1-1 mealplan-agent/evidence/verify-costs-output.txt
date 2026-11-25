@@ -1,0 +1,5 @@
+zero_shot rows: 32 AI: 163000 sum: 162800 absolute error: 200 available: 37200
+v1_initial rows: 23 AI: 156900 sum: 156500 absolute error: 400 available: 23500
+v1_changed rows: 21 AI: 139900 sum: 144000 absolute error: 4100 available: -4000
+v2_initial rows: 30 AI: 132400 sum: 145200 absolute error: 12800 available: 24800
+v2_changed rows: 29 AI: 124900 sum: 137700 absolute error: 12800 available: -2700
